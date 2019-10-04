@@ -2,19 +2,21 @@ module myblang
 {
 
     /*
-    VARIABLES: We want to define a language of Boolean expressions
-    that includes Boolean variables, not just literals. So beyond
-    being able to represent expressions such as (true && false), in
-    our little language as (bAnd(bTrue,bFalse)), we also want to be
-    able to write expressions such as (P && Q), or in our language
-    as (bAnd(bVar(P),bVar(Q))). To this end, we need to define a new
-    type, the values of which are "variables", and then we need a 
-    way to incorporate *variable expressions* into the syntax of our
-    language. 
+    VARIABLES: We want to define a language of Boolean 
+    expressions that includes Boolean variables, not just 
+    literals. So beyond being able to represent expressions 
+    such as (true && false), in our little language as (bAnd
+    (bTrue,bFalse)), we also want to be able to write 
+    expressions such as (P && Q), or in our language
+    as (bAnd(bVar(P),bVar(Q))). To this end, we need to 
+    define a new type, the values of which are "variables", 
+    and then we need a way to incorporate *variable 
+    expressions* into the syntax of our language. 
 
-    Here's a datatype with a single constructor, V, taking one nat
-    as an argument. Terms such as V(0), V(1), and V(2) are thus of
-    type "variable". These will be our variables.
+    Here's a datatype with a single constructor, V, taking 
+    one nat as an argument. Terms such as V(0), V(1), and V
+    (2) are thus of type "variable". These will be our 
+    variables.
     */
 
     datatype variable = V(n: nat)

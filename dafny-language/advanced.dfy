@@ -1,8 +1,8 @@
 /*
-At present this file contains only a list of Dafny language
-issues not covered in the material presented to date. We will
-introduce many, though not all, of these topics as needed as
-we go along.
+At present this file contains a list of Dafny language
+issues not covered in the material presented to date. 
+We will introduce many, though not all, of these topics
+as needed as we go along.
 */
 
 /* EXPRESSIONS

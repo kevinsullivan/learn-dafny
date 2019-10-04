@@ -62,7 +62,6 @@ module functions
     */
     function method id_int (x: int): int { x }
 
-
     // Compute the successor of nat x. The type nat
     // is the type of integers >= 0.
     function method inc (x: int): int { x + 1 }

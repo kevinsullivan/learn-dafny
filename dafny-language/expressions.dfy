@@ -6,12 +6,12 @@ method Main()
     */
 
     /* IF
-    If expressions first evaluate a Boolean expression and then 
-    evaluate one of the two following expressions, the first if 
-    the Boolean expression was true, otherwise the second one.
-    Notice in this example that an IF *expression* is used on the
-    right side of an update/assignment statement. There is also an
-    if *statement*.
+    If expressions first evaluate a Boolean expression
+    and then evaluate one of the two following expressions, 
+    the first if the Boolean expression was true, otherwise 
+    the second one. Notice in this example that an IF 
+    *expression* is used on the right side of an update/
+    assignment statement. There is also an if *statement*.
     */
 
     var x := 11;
@@ -22,26 +22,31 @@ method Main()
 
     /* CONJUCTION, DISJUCTION
 
-    Conjunction and disjuction are associative. This means that
-    no matter what b1, b2, and b3 are, (b1 && b2) && b3 is equal
-    to (b1 && (b2 && b3)), and the same for ||. 
+    Conjunction and disjuction are associative. This means 
+    that no matter what b1, b2, and b3 are, (b1 && b2) 
+    && b3 is equal to (b1 && (b2 && b3)), and the same
+    for ||. 
     
-    These operators are also "short circuiting" ( left to right). That is, their second argument is evaluated only if evaluating  the first operand does not by itself determine the value of the 
+    These operators are also "short circuiting" ( left to 
+    right). That is, their second argument is evaluated 
+    only if evaluating  the first operand does not by 
+    itself determine the value of the 
     expression. (From RefMan.)
 
-    Here's an example where short circuit evaluation matters. It
-    prevents the evaluation of an undefined expressions after &&.
+    Here's an example where short circuit evaluation 
+    matters. It prevents the evaluation of an undefined 
+    expressions after &&.
     */
 
     var a: array<int> := new int[0];  
     /* 
     Short circuit evaluation protects against evaluation of
-    a[0] when the length of a is 0. The right hand expression
-    is evaluated "lazily", only if the left hand expression
-    doesn't already indicate what the result should be. In this
-    case, because the left hand expression is false, the whole
-    expression must be false, so the right side won't ever be
-    evaluated.
+    a[0] when the length of a is 0. The right hand 
+    expression is evaluated "lazily", only if the left hand 
+    expression doesn't already indicate what the result 
+    should be. In this case, because the left hand 
+    expression is false, the whole expression must be false,
+    so the right side won't ever be evaluated.
     */
     var b1: bool := (a.Length != 0) && (a[0]==1);
 
@@ -75,13 +80,15 @@ method Main()
     
     /* RELATIONAL EXPRESSIONS
 
-    The relation expressions that have a relational operator that
-    compares two or more terms and returns a Boolean result. The ==, 
-    !=, <, >, <=, and >= operators are "chaining". The in and !in 
-    operators apply to collection types and compute membership or 
+    The relation expressions that have a relational 
+    operator that compares two or more terms and returns a 
+    Boolean result. The ==, !=, <, >, <=, and >= operators 
+    are "chaining". The in and !in operators apply to 
+    collection types and compute membership or 
     non-membership respectively. The !! operator represents 
-    disjointness for sets and multisets. (Adapted from the reference 
-    manual.) Here are just a few examples, within assert statements.
+    disjointness for sets and multisets. (Adapted from the 
+    reference manual.) Here are just a few examples, within 
+    assert statements.
     */
 
     assert 3 in { 1, 2, 3 };                            // set member
@@ -112,18 +119,20 @@ method Main()
 
     /* OLD
 
-    An old expression is used in postconditions. old(e) evaluates to the value expression e had on entry to the current method. We saw
-    and example of this earlier. For an example, see the "incr" method after this Main
+    An old expression is used in postconditions. old(e) 
+    evaluates to the value expression e had on entry to the 
+    current method. We saw and example of this earlier. For 
+    an example, see the "incr" method after this Main
     */
 
     /* CARDINALITY
 
-    For a collection expression c, |c| is the cardinality of c. For 
-    a set or sequence the cardinality is the number of elements. For 
-    a multiset the cardinality is the sum of the multiplicities of 
-    the elements. For a map the cardinality is the cardinality of 
-    the domain of the map. Cardinality is not defined for infinite 
-    maps. F
+    For a collection expression c, |c| is the cardinality 
+    of c. For a set or sequence the cardinality is the 
+    number of elements. For a multiset the cardinality is 
+    the sum of the multiplicities of the elements. For a 
+    map the cardinality is the cardinality of the domain of 
+    the map. Cardinality is not defined for infinite maps. F
     */
 
     var c1 := | [1, 2, 3] |;
