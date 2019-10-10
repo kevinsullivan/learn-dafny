@@ -190,7 +190,7 @@ statements are needed to ensure that the array is not
 null and not zero length. The modifies command explains
 that the method body is allowed to change the value of a.
 */
-method incr(a: array<nat>) returns (r: array<nat>) 
+method incrA0(a: array<nat>) returns (r: array<nat>) 
     requires a != null;
     requires a.Length > 0;
     modifies a; 

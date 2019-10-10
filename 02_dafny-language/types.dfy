@@ -21,8 +21,10 @@ method NumOps()
 {
     var r1: real := 1000000.0;
     var i1: int := 1000000;
+    var n1: nat := 100;
+
     var i2: int := 1_000_000;   // underscores for readiability
-    var i3 := 1_000;            // Dafny can often infer types
+    var i3 := 1_000;            // Dafny can infer some types
     var b1 := (10 < 20) && (20 <= 30); // a boolean expression
     var b2 := 10 < 20 <= 30;    // equivalent, with "chaining"
     var i4: int := (5.5).Floor; // 5
@@ -78,14 +80,14 @@ method SequencePlay()
     var b3 := hi_seq < hi_seq;  // this is false
     var b4 := hi_seq <= hi_seq; // prefix, true
     var sum := hi_seq + hi_seq; // concatenation
-    var len := | hi_seq |;
+    var len := | hi_seq |; // length
     var Hi_seq := hi_seq[0 := 'H']; // update
     var b5 := 'h' in hi_seq; // member, true, !in
-    var s := [0,1,2,3,4,5];
+    var s := [0,1,2,3,4,5]; // example
     var s1 := s[0..2];  // subseqence
     var s2 := s[1..];   // "drop" prefix of len 1
     var s3 := s[..2];   // "take" prefix of len 2
-    // there's a slice operator, too; later
+    // there's a slice operator, too, elided
  }
 
  /*

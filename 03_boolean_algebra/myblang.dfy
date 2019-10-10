@@ -4,56 +4,47 @@ module myblang
     /*
     VARIABLES: We want to define a language of Boolean 
     expressions that includes Boolean variables, not just 
-    literals. So beyond being able to represent expressions 
-    such as (true && false), in our little language as (bAnd
-    (bTrue,bFalse)), we also want to be able to write 
-    expressions such as (P && Q), or in our language
-    as (bAnd(bVar(P),bVar(Q))). To this end, we need to 
-    define a new type, the values of which are "variables", 
-    and then we need a way to incorporate *variable 
-    expressions* into the syntax of our language. 
-
-    Here's a datatype with a single constructor, V, taking 
-    one nat as an argument. Terms such as V(0), V(1), and V
-    (2) are thus of type "variable". These will be our 
-    variables.
+    literals. 
+    
+    To this end, we define a type, terns of which we
+    interpret as representing "variables" in the syntax
+    of the boolean algebra language we're defining.
+    
+    We define a datatype, variable, with one constructor,
+    the single nat argument of which is used to distinguish
+    variables. We use terms such as V(0), V(1), and V(2) as
+    distinct variables. These terms can in turn be bound to
+    descriptive identifiers: e.g.,  var isTrue := V(0). 
     */
 
     datatype variable = V(n: nat)
     
-    /*
-    Note that we can give variables more convenient names in code
-    by binding them as the values of better-named Dafny variables, 
-    like this:
-        var P := V(0);
-        var Q := V(1);
-        var R := V(2);
-    */
     
     /*
-    SYNTAX: Expresions are values of an inductively defined type
+    SYNTAX: We represent Boolean expressions as terms
+    of the following inductively defined bExp type. 
     */
     datatype bExp = 
         /*
         Here are the constructors for Boolean literal expressiosn
         */
-        bTrue | 
-        bFalse | 
+        | bTrue
+        | bFalse 
         /*
         We now provide "bVar" as a constructor for building *variable*
         expressions.
         */
-        bVar(v: variable) |
+         | bVar(v: variable)
 
         /*
         And finally we provide constructors for building expressions
         with the usual Boolean connectives.
         */
-        bNot(e: bExp) |
-        bAnd(e1: bExp, e2: bExp) |
-        bOr(e1:bExp, e2: bExp) |
-        bImpl(e1: bExp, e2: bExp) |
-        bIfThenElse(e1: bExp, e2: bExp, e3: bExp)
+        | bNot(e: bExp) 
+        | bAnd(e1: bExp, e2: bExp)
+        | bOr(e1:bExp, e2: bExp)
+        | bImpl(e1: bExp, e2: bExp)
+        | bIfThenElse(e1: bExp, e2: bExp, e3: bExp)
 
 
     /* 
