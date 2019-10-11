@@ -5,28 +5,29 @@
 module binRelST
 {    
     /*
-    Abstraction of a finite binary relation on a 
-    set, S. Underlying representation is a triple: 
-    the domain set, S, the co-domain set, T, and 
-    a set of pairs over S X T.
+    Abstraction of a finite binary relation on 
+    sets, S and T. Underlying representation is
+    a triple: the domain set, S, the co-domain
+    set, T, and a set of pairs over the product
+    set, S x T.
     */ 
     class binRelOnST<Stype(!new,==),Ttype(!new,==)>
     {
         var d: set<Stype>;      // domain: set of values of type S
-        var c: set<Ttype>       // codomain: set of values of type T
-        var r: set<(Stype,Ttype)>;  // relation: set of pairs from s X t
+        var c: set<Ttype>       // co_domain: set of values of type T
+        var p: set<(Stype,Ttype)>;  // relation: set of pairs from s X t
  
         predicate Valid()
             reads this;
         {
-            // all tuple elements must be in dom and codom, respectively
-            forall x, y :: (x, y) in r ==> x in d && y in c
+            // tuple elements must be in dom and co_dom, resp.
+            forall x, y :: (x, y) in p ==> x in d && y in c
         }
 
 
         /*
         Constructor requires that all values appearing in 
-        any of the pairs in p be in domain and codomain sets,
+        any of the pairs in p be in domain and co_domain sets,
         respectively. A note: the ensures clause really is
         needed here: the bodies of *methods* are not visible
         to the verifier, so if you want the verifier to be
@@ -36,23 +37,27 @@ module binRelST
         the verifier, though they can be made "opaque" using
         a special keyword. 
         */
-        constructor(dom: set<Stype>, codom: set<Ttype>, rel: set<(Stype,Ttype)>)
+        constructor(dom_def: set<Stype>, co_dom: set<Ttype>, pairs: set<(Stype,Ttype)>)
 
             /*
-            Ensure that all values in tuples are from dom and codom
-            sets, respectively. 
+            Ensure that all values in tuples are from dom and co_dom
+            sets, respectively. We don't use "Valid" here because we
+            haven't constructed the object yet; rather we require that
+            the arguments to the construct be valid in the sense that
+            when we use them, we will end up with a "Valid" object.
             */
             requires forall x, y :: 
-                (x, y) in rel ==> x in dom && y in codom;
+                (x, y) in pairs ==> x in dom_def && y in co_dom;
 
             /*
             Explain to verifier what this method accomplishes. The
             verifier needs this information to verify propositions
-            elsewhere in this code. And because method bodies are 
-            "opaque" to the verifier, it can't read this information 
-            from the method body itself.
+            elsewhere in this code. It's because method bodies are 
+            "opaque" to the verifier, that it can't infer these
+            facts from the method body itself. (Function definitions
+            are not opaque in this way.)
             */
-            ensures d == dom && c == codom && r == rel;
+            ensures d == dom_def && c == co_dom && p == pairs;
 
             /*
             Once the constructor finishes, this object should 
@@ -60,25 +65,33 @@ module binRelST
             */
             ensures Valid();
         {
-            d := dom;
-            c := codom;
-            r := rel;
+            d := dom_def;
+            c := co_dom;
+            p := pairs;
         }
 
 
         /*
-        Return domain/range set. 
+        Return domain of definition set. 
         */
-        function method dom(): set<Stype>
+        function method dom_def(): (r : set<Stype>)
             /*
             The Dafny verifier needs to know what 
             values function results depend on. So 
             we have to tell it that the function
             here can read any of the values (the
             data members) in the current function.
+
+            A precondition of this method, and all
+            methods, is that the object be in a state
+            that is consistent with its invariants;
+            and a postcondition is that this method,
+            and all methods, also leave it in such
+            a state.
             */
             reads this;
             requires Valid();
+            ensures r == d;
             ensures Valid();
         {
             d
@@ -86,11 +99,12 @@ module binRelST
 
 
         /*
-        Return domain/range set
+        Return co_domain set.
         */
-        function method codom(): set<Ttype>
+        function method co_dom(): (r : set<Ttype>)
             reads this;
             requires Valid();
+            ensures r == c;
             ensures Valid();
         {
             c
@@ -98,41 +112,35 @@ module binRelST
 
 
         /*
-        Accessor: Get the underlying set. Note that dom() 
-        and codom() also return the same results.
-        */
-        function method S(): set<Stype> 
-            reads this;
-            requires Valid();
-            ensures Valid();
-        {
-            dom()
-        }
-
-
-       /*
-        Accessor: Get the underlying set. Note that dom() 
-        and codom() also return the same results.
-        */
-        function method T(): set<Ttype> 
-            reads this;
-            requires Valid();
-            ensures Valid();
-        {
-            codom()
-        }
-
-
-        /*
         Return set of ordered pairs
         */
-        function method rel(): set<(Stype,Ttype)>
+        function method pairs(): set<(Stype,Ttype)>
             reads this
             requires Valid();
             ensures Valid();
         {
-            r
+            p
         }
+
+        function method dom() : set<Stype>
+            reads this
+            requires Valid();
+            ensures Valid();
+        {
+            set s : Stype | 
+                s in dom_def() &&   // needed to ascertain finiteness
+                exists t :: t in co_dom() && (s,t) in pairs() :: s
+        }
+
+        function method ran() : set <Ttype>
+            reads this
+            requires Valid();
+            ensures Valid();
+        {
+            set t : Ttype | 
+                t in co_dom() &&
+                exists s :: s in dom_def() && (s,t) in pairs() :: t
+        }    
 
 
         /***********************************/
@@ -142,20 +150,20 @@ module binRelST
         predicate method related(x: Stype, y: Ttype)
             reads this;
             requires Valid();
-            requires x in S() && y in T();
+            requires x in dom_def() && y in co_dom();
             ensures Valid();
         {
-            (x, y) in rel()
+            (x, y) in pairs()
         }
 
 
         predicate method unrelated(x: Stype, y: Ttype)
             reads this;
             requires Valid();
-            requires x in S() && y in T();
+            requires x in dom_def() && y in co_dom();
             ensures Valid();
         {
-            (x, y) !in rel()
+            (x, y) !in pairs()
         }
 
 
@@ -171,10 +179,12 @@ module binRelST
             requires Valid();
             ensures Valid();
         {
-            forall x, y, z :: x in d && y in c && z in c &&
-                            (x, y) in r && 
-                            (x, z) in r ==> 
-                            y == z  
+            forall x, y, z ::   x in dom_def() && 
+                                y in co_dom() && 
+                                z in co_dom() &&
+                                (x, y) in pairs() && 
+                                (x, z) in pairs() ==> 
+                                y == z  
         }
 
         
@@ -187,10 +197,12 @@ module binRelST
             requires isFunction();
             ensures Valid();
         {
-            forall x, y, z :: x in d && y in d && z in c &&
-                            (x, z) in r && 
-                            (y, z) in r ==> 
-                            x == y  
+            forall x, y, z ::   x in dom_def() && 
+                                y in dom_def() && 
+                                z in co_dom() &&
+                                (x, z) in pairs() && 
+                                (y, z) in pairs() ==> 
+                                x == y  
         }
         
         
@@ -204,10 +216,10 @@ module binRelST
             ensures Valid();
         {
             /*
-            A function, r, is surjective iff for every y in the codomain, there is some x in the domain such that the pair (x, y) is in r.
+            A function, r, is surjective iff for every y in the co_domain, there is some x in the domain such that the pair (x, y) is in r.
             */ 
-            forall y :: y in codom() ==> 
-                exists x :: x in dom() && (x,y) in rel()
+            forall y :: y in co_dom() ==> 
+                exists x :: x in dom_def() && (x,y) in pairs()
         }
 
 
@@ -235,11 +247,11 @@ module binRelST
         {
             /*
             A function is total if for every x in the 
-            domain, there is some y in the codomain with 
+            domain, there is some y in the co_domain with 
             (x,y) in r
             */
             forall x :: x in dom() ==> 
-                exists y :: y in codom() && (x,y) in rel()
+                exists y :: y in co_dom() && (x,y) in pairs()
         }
 
         
@@ -250,7 +262,7 @@ module binRelST
         community about whether the partial functions include or exclude the
         total functions.
         */
-        predicate method isPartial()
+        predicate method isStrictlyPartial()
             reads this;
             requires Valid();
             requires isFunction();
@@ -261,59 +273,30 @@ module binRelST
 
 
         /*
-        Return true iff value, x, of type Stype, is in domain
-        */
-
-        predicate method inDomain(x: Stype)
-            requires Valid();
-            reads this;
-            ensures Valid();
-        {
-            x in dom()
-        }
-
-
-         /*
-        Return true iff value, y: Ttype, is in codomain
-        */
-
-        predicate method inCodomain(y: Ttype)
-            requires Valid();
-            reads this;
-            ensures Valid();
-        {
-            y in codom()
-        }
-
-
-        /*
         Return true iff this relation is defined 
-        for the given value. In some mathematical 
-        writing, the term "domain" is often used 
-        to refer to the set of values on which 
-        a relation is defined. Our usage of the 
-        term differs.
+        for a value that (as a precondition) is in
+        the domain of definition of this relation.  
         */
         predicate method isDefinedFor(x: Stype)
             requires Valid()
-            requires inDomain(x);
+            requires x in dom_def();
             reads this;
         {
-            exists y :: y in codom() && (x, y) in rel()
+            exists y :: y in ran() && (x, y) in pairs()
         }
 
 
         /*
         Return true iff given value is in range of
-        relation: not just in codomain set but mapped
+        relation: not just in co_domain set but mapped
         to by some value for which relation is defined.
         */
         predicate method inRange(y: Ttype)
             requires Valid()
-            requires inCodomain(y);
+            requires y in co_dom();
             reads this;
         {
-            exists x :: x in dom() && (x, y) in rel()
+            exists x :: x in dom_def() && (x, y) in pairs()
         }
 
 
@@ -323,10 +306,10 @@ module binRelST
         function method image(x: Stype): set<Ttype>
             reads this;
             requires Valid(); 
-            requires inDomain(x);
+            requires x in dom();
             ensures Valid();
         {
-            set y | y in codom() && (x, y) in r
+            set y | y in ran() && (x, y) in pairs()
         }
 
 
@@ -336,10 +319,10 @@ module binRelST
         function method preimage(y: Ttype): set<Stype>
             reads this;
             requires Valid(); 
-            requires inCodomain(y);
+            requires y in co_dom();
             ensures Valid();
         {
-            set x | x in dom() && (x, y) in rel()
+            set x | x in dom() && (x, y) in pairs()
         }
 
 
@@ -349,14 +332,14 @@ module binRelST
         function method imageOfSet(xs: set<Stype>): set<Ttype>
             reads this;
             requires Valid(); 
-            requires forall x :: x in xs ==> inDomain(x)
+            requires forall x :: x in xs ==> x in dom()
             ensures Valid();
         {
             /*
             For each x in the given set of x values (xs) find all
             the (x, y) pairs; return the set of all such y values
             */
-            set x, y | x in xs && y in codom() && (x, y) in r :: y
+            set x, y | x in xs && y in co_dom() && (x, y) in pairs() :: y
         }
 
 
@@ -366,15 +349,16 @@ module binRelST
         function method preimageOfSet(ys: set<Ttype>): set<Stype>
             reads this;
             requires Valid(); 
-            requires forall y :: y in ys ==> inCodomain(y);
+            requires forall y :: y in ys ==> y in co_dom();
             ensures Valid();
         {
-            set x, y |  y in ys && x in dom() && (x, y) in r :: x 
+            set x, y |  y in ys && x in dom_def() && (x, y) in pairs() :: x 
         }
 
 
         /*
-        Compute image of a domain element under this relation.
+        Compute image of a domain element under this relation,
+        conditional on this relation also being a function.
         This code assumes there is exactly one element in the 
         set from which the value is drawn (but this assumption
         is not yet verified).
@@ -382,10 +366,17 @@ module binRelST
         method fimage(x: Stype) returns (y: Ttype)
             requires Valid(); 
             requires isFunction();  // ensures single-valuedness
-            requires inDomain(x);   // ensures function is non-empty
+            requires x in dom();   // ensures function is non-empty
             requires isDefinedFor(x);
+            ensures y in set y' | y' in ran() && (x, y') in pairs();
+            ensures 
+                exists y, y' :: 
+                    (y in ran() && 
+                    y' in ran() &&
+                    (x, y) in pairs() &&
+                    (x, y') in pairs() ==>
+                y == y');
             ensures Valid();
-            ensures y in set y' | y' in codom() && (x, y') in r
         {
             /* 
             Assign to y the one value in the image of x. This
@@ -402,7 +393,7 @@ module binRelST
         Helper function: given a set of pairs, return the set
         of inverted (reversed) pairs.
         */
-        static function method invert<S(==),T(==)>(ps: set<(S,T)>): 
+        static function method invert<S(==),T(==)>(ps: set<(S,T)>) : 
             set<(T,S)>
         {
             set x, y, p | p in ps && x == p.0 && y == p.1 :: (y, x)
@@ -415,62 +406,75 @@ module binRelST
         method inverse() returns (r: binRelOnST<Ttype,Stype>)
             requires Valid();
             ensures r.Valid();
-            ensures r.dom() == codom();
-            ensures r.codom() == dom();
-            ensures r.rel() == invert(rel());
+            ensures r.dom_def() == co_dom();
+            ensures r.co_dom() == dom_def();
+            ensures r.pairs() == invert(pairs());
         {
-            r := new binRelOnST(codom(), dom(), invert(rel()));
+            r := new binRelOnST(co_dom(), dom_def(), invert(pairs()));
         }
 
 
         /*
         Helper function: "join" two sets of pairs, g and f,
-        returning (g o f), on a common element in the codomain
+        returning (g o f), on a common element in the co_domain
         of f and the domain of g. Defining this function once
         here eliminates redundancy in the definition of the 
         compose function, below. 
         
-        Along with the two sets of pairs, g and f, this function  takes sets representing the domains and codomains from which the values in the pairs are drawn: the domain of f, shared codomain of f and domain of g, and the codomain of g. 
+        Along with the two sets of pairs, g and f, this function  takes sets representing the domains and co_domains from which the values in the pairs are drawn: the domain of f, shared co_domain of f and domain of g, and the co_domain of g. 
         */
-        static function method join<X(!new), Y(!new), Z(!new)>
+        static function method comp_helper<X(!new), Y(!new), Z(!new)>
             (g: set<(Y,Z)>, f: set<(X,Y)>, 
-             fdom: set<X>, shared: set<Y>, gcodom: set<Z>): 
+             fdom: set<X>, shared: set<Y>, gco_dom: set<Z>): 
             set<(X,Z)>
         {
             set x, z | 
-                x in fdom && z in gcodom &&
+                x in fdom && z in gco_dom &&
                 exists y :: y in shared && 
                 (x, y) in f && (y, z) in g :: (x,z)
             /*
             set x, y, z | 
-                x in fdom && y in shared && z in gcodom &&
+                x in fdom && y in shared && z in gco_dom &&
                 (x, y) in f && (y, z) in g :: (x, z)
+
+                               comp_helper(    
+                                g.pairs(),
+                                this.pairs(), 
+                                this.dom(), 
+                                g.dom_def(),
+                                g.co_dom())
+
             */
         }
 
 
         /*
-        Returns h, the composition of "this" relation, from S to T, with the relation, that, from T to R, yielding a relation from 
-        S to R. S-values to R-values. Composition of relations is a 
-        special case of composition of functions. More details to be
-        discussed in class.
+        Returns h, the composition of "this" relation, from S to T, 
+        with the relation, g, from T to R, yielding the relation, r,
+        from S to R. S-values to R-values. 
         */
         method compose<Rtype>(g: binRelOnST<Ttype,Rtype>) 
             returns (h : binRelOnST<Stype,Rtype>)
-            requires Valid();
+            requires this.Valid();
             requires g.Valid();
-            requires g.dom() == codom();
+            requires g.dom_def() == this.co_dom();
             ensures h.Valid();
-            ensures h.dom() == dom();
-            ensures h.codom() == g.codom();
-            ensures h.rel() == join(g.rel(), rel(), dom(), g.dom(), g.codom())
+            ensures h.dom_def() == this.dom_def();
+            ensures h.co_dom() == g.co_dom();
+            ensures h.pairs() == 
+                comp_helper(    g.pairs(),
+                                this.pairs(), 
+                                this.dom(), 
+                                g.dom_def(),
+                                g.co_dom())
             ensures forall x, z :: 
-                (x, z) in h.rel() ==> x in dom() && z in g.codom();
+                (x, z) in h.pairs() ==> x in dom() && z in g.co_dom();
         {
-            h := new binRelOnST<Stype, Rtype>(
-                    dom(),  
-                    g.codom(), 
-                    join(g.rel(), rel(), dom(), g.dom(), g.codom())
+            h := new binRelOnST<Stype, Rtype>
+                (
+                    this.dom_def(),  
+                    g.co_dom(), 
+                    comp_helper(g.pairs(), pairs(), dom(), g.dom_def(), g.co_dom())
                 );
         }
     }
