@@ -4,12 +4,8 @@
 
 /*
 This class provides an abstraction of a polymorphic
-finite binary relation over a set, S, of elements 
-of an equality-supporting type, T. In mathematical
-terminology, this is an endorelation, a homogeneous
-relation or just a set with one of several kinds of
-relations (e.g., an ordered set if the relation is
-a total order).
+finite binary relation over a single set, S, of 
+elements of an equality-supporting type, S.
 */
 
 include "binRelOnST.dfy"

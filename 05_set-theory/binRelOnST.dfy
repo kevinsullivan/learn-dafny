@@ -11,11 +11,11 @@ module binRelST
     set, T, and a set of pairs over the product
     set, S x T.
     */ 
-    class binRelOnST<Stype(!new,==),Ttype(!new,==)>
+    class binRelOnST<S(!new,==),T(!new,==)>
     {
-        var d: set<Stype>;      // domain: set of values of type S
-        var c: set<Ttype>       // co_domain: set of values of type T
-        var p: set<(Stype,Ttype)>;  // relation: set of pairs from s X t
+        var d: set<S>;      // domain: set of values of type S
+        var c: set<T>       // co_domain: set of values of type T
+        var p: set<(S,T)>;  // relation: set of pairs from s X t
  
         predicate Valid()
             reads this;
@@ -37,7 +37,7 @@ module binRelST
         the verifier, though they can be made "opaque" using
         a special keyword. 
         */
-        constructor(dom_def: set<Stype>, co_dom: set<Ttype>, pairs: set<(Stype,Ttype)>)
+        constructor(dom_def: set<S>, co_dom: set<T>, pairs: set<(S,T)>)
 
             /*
             Ensure that all values in tuples are from dom and co_dom
@@ -74,7 +74,7 @@ module binRelST
         /*
         Return domain of definition set. 
         */
-        function method dom_def(): (r : set<Stype>)
+        function method dom_def(): (r : set<S>)
             /*
             The Dafny verifier needs to know what 
             values function results depend on. So 
@@ -101,7 +101,7 @@ module binRelST
         /*
         Return co_domain set.
         */
-        function method co_dom(): (r : set<Ttype>)
+        function method co_dom(): (r : set<T>)
             reads this;
             requires Valid();
             ensures r == c;
@@ -114,7 +114,7 @@ module binRelST
         /*
         Return set of ordered pairs
         */
-        function method pairs(): set<(Stype,Ttype)>
+        function method pairs(): set<(S,T)>
             reads this
             requires Valid();
             ensures Valid();
@@ -122,22 +122,22 @@ module binRelST
             p
         }
 
-        function method dom() : set<Stype>
+        function method dom() : set<S>
             reads this
             requires Valid();
             ensures Valid();
         {
-            set s : Stype | 
+            set s : S | 
                 s in dom_def() &&   // needed to ascertain finiteness
                 exists t :: t in co_dom() && (s,t) in pairs() :: s
         }
 
-        function method ran() : set <Ttype>
+        function method ran() : set <T>
             reads this
             requires Valid();
             ensures Valid();
         {
-            set t : Ttype | 
+            set t : T | 
                 t in co_dom() &&
                 exists s :: s in dom_def() && (s,t) in pairs() :: t
         }    
@@ -147,7 +147,7 @@ module binRelST
         /* ARE GIVEN NODES RELATED OR NOT? */
         /***********************************/
 
-        predicate method related(x: Stype, y: Ttype)
+        predicate method related(x: S, y: T)
             reads this;
             requires Valid();
             requires x in dom_def() && y in co_dom();
@@ -157,7 +157,7 @@ module binRelST
         }
 
 
-        predicate method unrelated(x: Stype, y: Ttype)
+        predicate method unrelated(x: S, y: T)
             reads this;
             requires Valid();
             requires x in dom_def() && y in co_dom();
@@ -277,7 +277,7 @@ module binRelST
         for a value that (as a precondition) is in
         the domain of definition of this relation.  
         */
-        predicate method isDefinedFor(x: Stype)
+        predicate method isDefinedFor(x: S)
             requires Valid()
             requires x in dom_def();
             reads this;
@@ -291,7 +291,7 @@ module binRelST
         relation: not just in co_domain set but mapped
         to by some value for which relation is defined.
         */
-        predicate method inRange(y: Ttype)
+        predicate method inRange(y: T)
             requires Valid()
             requires y in co_dom();
             reads this;
@@ -303,7 +303,7 @@ module binRelST
         /*
         Compute image set of a single value under this relation.
         */
-        function method image(x: Stype): set<Ttype>
+        function method image(x: S): set<T>
             reads this;
             requires Valid(); 
             requires x in dom();
@@ -316,7 +316,7 @@ module binRelST
         /*
         Compute preimage set of a value under this relation
         */
-        function method preimage(y: Ttype): set<Stype>
+        function method preimage(y: T): set<S>
             reads this;
             requires Valid(); 
             requires y in co_dom();
@@ -329,7 +329,7 @@ module binRelST
         /*
         Compute image set of a set of values under this relation
         */
-        function method imageOfSet(xs: set<Stype>): set<Ttype>
+        function method imageOfSet(xs: set<S>): set<T>
             reads this;
             requires Valid(); 
             requires forall x :: x in xs ==> x in dom()
@@ -346,7 +346,7 @@ module binRelST
         /*
         Compute preimage set of a set of values under this relation.
         */
-        function method preimageOfSet(ys: set<Ttype>): set<Stype>
+        function method preimageOfSet(ys: set<T>): set<S>
             reads this;
             requires Valid(); 
             requires forall y :: y in ys ==> y in co_dom();
@@ -363,7 +363,7 @@ module binRelST
         set from which the value is drawn (but this assumption
         is not yet verified).
         */
-        method fimage(x: Stype) returns (y: Ttype)
+        method fimage(x: S) returns (y: T)
             requires Valid(); 
             requires isFunction();  // ensures single-valuedness
             requires x in dom();   // ensures function is non-empty
@@ -403,7 +403,7 @@ module binRelST
         /*
         Construct and return the inverse of this relation.
         */
-        method inverse() returns (r: binRelOnST<Ttype,Stype>)
+        method inverse() returns (r: binRelOnST<T,S>)
             requires Valid();
             ensures r.Valid();
             ensures r.dom_def() == co_dom();
@@ -453,8 +453,8 @@ module binRelST
         with the relation, g, from T to R, yielding the relation, r,
         from S to R. S-values to R-values. 
         */
-        method compose<Rtype>(g: binRelOnST<Ttype,Rtype>) 
-            returns (h : binRelOnST<Stype,Rtype>)
+        method compose<R>(g: binRelOnST<T,R>) 
+            returns (h : binRelOnST<S,R>)
             requires this.Valid();
             requires g.Valid();
             requires g.dom_def() == this.co_dom();
@@ -470,7 +470,7 @@ module binRelST
             ensures forall x, z :: 
                 (x, z) in h.pairs() ==> x in dom() && z in g.co_dom();
         {
-            h := new binRelOnST<Stype, Rtype>
+            h := new binRelOnST<S, R>
                 (
                     this.dom_def(),  
                     g.co_dom(), 
