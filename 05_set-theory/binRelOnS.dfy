@@ -5,7 +5,10 @@
 /*
 This class provides an abstraction of a polymorphic
 finite binary relation over a single set, S, of 
-elements of an equality-supporting type, S.
+elements of an equality-supporting type, S. There
+is no class inheritance in Dafny, so we can't just
+inherit from and extend BinRelST. Rather we wrap
+and delegate to a private instance of BinRelST.
 */
 
 include "binRelOnST.dfy"
@@ -26,7 +29,7 @@ module binRelS
     by calling corresponding operations on the
     underlying concrete representation object. 
     */ 
-    class binRelOnS<Stype(!new,==)>
+    class binRelOnS<S(!new,==)>
     {
         /*****************************/
         /* STATE AND STATE INVARIANT */
@@ -38,7 +41,7 @@ module binRelS
         relation on S X T where both sets are of
         the same type, T.
         */
-        var r: binRelOnST<Stype,Stype>;
+        var r: binRelOnST<S,S>;
 
 
         /*
@@ -51,7 +54,7 @@ module binRelS
             reads this;
             reads r;
         {
-            r.Valid() && r.dom() == r.codom()
+            r.Valid() && r.dom_def() == r.co_dom()
         }
 
 
@@ -67,13 +70,21 @@ module binRelS
         the constraint that values in the relation be from
         the domain/codomain set.
         */
-        constructor(aSet: set<Stype>, pairs: set<(Stype,Stype)>)
+        constructor(aSet: set<S>, prs: set<(S,S)>)
             /*
             The relation has to be over the given set.
             */
             requires forall x, y :: 
-                (x, y) in pairs ==> x in aSet && y in aSet;
+                (x, y) in prs ==> x in aSet && y in aSet;
             
+            /*
+            Note that the following ensures must come
+            before the subsequent "ensures" clause, as
+            that clause calls functions that require
+            Valid() to be true.
+            */
+            ensures Valid();
+
             /*
             Dafny can't see into *method* bodies (they
             are thus said to be "opaque"), so we have to
@@ -81,25 +92,13 @@ module binRelS
             its specification, to enable verification of
             subsequent propositions about this class.
             */
-            ensures r.d == aSet && r.c == aSet && r.r == pairs
-
-            /*
-            The constructor leaves the object in a valid 
-            state. All other operations then require that 
-            an object be Valid as a precondition, and that
-            they also leave the object in a Valid state.
-            The establishment and preservation of the state 
-            invariant for this class is thereby assured. We
-            not that there is in Dafny a somewhat cryptic
-            way to avoid having to include Valid() as both
-            a pre- and post-condition in every operation,
-            but we avoid it here in the interest of being
-            transparent.
-            */
-        ensures Valid();
-        {
-            r := new binRelOnST(aSet,aSet,pairs);
-        }
+            ensures dom_def() == aSet && 
+                    co_dom() == aSet && 
+                    pairs() == prs;
+            
+            {
+                r := new binRelOnST(aSet,aSet,prs);
+            }
 
 
         /*
@@ -109,7 +108,7 @@ module binRelS
         of the completeness of the abstraction we define
         here.
         */
-        function method dom(): set<Stype>
+        function method dom(): set<S>
 
             /*
             Every operation (function, method) of this 
@@ -164,34 +163,33 @@ module binRelS
         }
 
 
-        /*
-        Accessor (projection) function: return the codomain 
-        set. This operation returns the same result as dom()
-        and getSet(). The explanations for the preceding 
-        function apply to this and other operations in this 
-        class. We do not repeat them here or subsequently.
-        */
-        function method codom(): set<Stype>
+        function method dom_def(): set<S>
+            requires Valid();
             reads this;
             reads r;
-            requires Valid();
             ensures Valid();
         {
-            r.codom()
+            r.dom_def()
         }
 
 
-        /*
-        Accessor: Get the underlying set. Note that dom() 
-        and codom() also return the same results.
-        */
-        function method S(): set<Stype> 
+        function method co_dom(): set<S>
             reads this;
             reads r;
             requires Valid();
             ensures Valid();
         {
-            dom()
+            r.co_dom()
+        }
+        
+        
+        function method ran(): set<S>
+            reads this;
+            reads r;
+            requires Valid();
+            ensures Valid();
+        {
+            r.ran()
         }
 
 
@@ -199,69 +197,39 @@ module binRelS
         Accessor/projection function: return the 
         relation (pair set).
         */
-        function method rel(): set<(Stype,Stype)>
+        function method pairs(): set<(S,S)>
             reads this;
             reads r;
             requires Valid();
             ensures Valid();
         {
-            r.rel()
+            r.pairs()
         }
 
         /***********************************/
         /* ARE GIVEN NODES RELATED OR NOT? */
         /***********************************/
 
-        predicate method related(x: Stype, y: Stype)
+        predicate method related(x: S, y: S)
             reads this;
             reads r;
             requires Valid();
-            requires x in S() && y in S();
+            requires x in dom_def() && y in co_dom();
             ensures Valid();
         {
             r.related(x, y)
-            //(x, y) in rel()
         }
-
-
-        predicate method unrelated(x: Stype, y: Stype)
-            reads this;
-            reads r;
-            requires Valid();
-            requires x in S() && y in S();
-            ensures Valid();
-        {
-            r.unrelated(x,y)
-            //(x, y) !in rel()
-        }
-
 
         /*********************************/
         /* BASIC PROPERTIES OF FUNCTIONS */
         /*********************************/
 
-        /*
-        We start by defining what it means for a
-        relation to be a function and some basic
-        properties of functions as a special kind
-        of binary relation. 
-        */
-
-        /*
-        Return true if and only if the relation is 
-        single-valued (i.e., actually a function)
-        */
         predicate method isFunction()
             reads this;
             reads r;
             requires Valid();
             ensures Valid();
         {
-            /* 
-            Again, we just "delegate" this.isFunction()
-            to r (the underlying binRelOnST object, by 
-            calling r.isFunction().
-            */
             r.isFunction()  
         }
 
@@ -346,7 +314,7 @@ module binRelS
         Return true iff the relation is partial 
         (not total relative to its domain set).
         */
-        predicate method isPartialFunction()
+        predicate method isStrictlyPartialFunction()
             reads this;
             reads r;
             requires Valid();
@@ -356,9 +324,10 @@ module binRelS
             !r.isTotal()
         }
 
-        /************************************************/
-        /* BASIC PROPERTIES OF RELATIONS MORE GENERALLY */
-        /************************************************/
+
+                /****************************************************/
+        /* BASIC PROPERTIES OF ENDORELATIONS MORE GENERALLY */
+        /****************************************************/
 
         /*
         Return true iff this relation is reflexive.
@@ -382,8 +351,57 @@ module binRelS
             requires Valid();
             ensures Valid(); 
         {
-            forall x :: x in dom() ==> (x, x) in rel()
+            forall x :: x in dom_def() ==> related(x, x)
         }
+
+                /*
+        A relation on a set S is said to be irreflexive
+        if no element is related to, or maps, to itself.
+        As an example, the less than relation on natural
+        numbers is irreflexive: not natural number is less
+        than itself.
+        */
+        predicate method isIrreflexive()
+            reads this;
+            reads r;
+            requires Valid();
+            ensures Valid();
+
+        {
+            forall x :: x in dom_def() ==> !related(x,x)
+        }
+
+
+        /*
+        A binary relation on a set, S, is said to be 
+        quasi-reflexive if every element that is related
+        to some other element is also related to itself.
+
+        Adapted from Wikipedia: An example is a relation 
+        "has the same limit as" on infinite sequences of 
+        real numbers. Recall that some such sequences do
+        converge on a limit. For example, the infinite
+        sequence, 1/n, for n = 1 to infinity, converges
+        on (has limit) zero. Not every sequence of real
+        numbers has such a limit, so the "has same limit
+        as" relation is not reflexive. But if on sequence 
+        has the same limit as some other sequence, then 
+        it has the same limit as itself.
+        */
+        predicate method isQuasiReflexive()
+             reads this;
+            reads r;
+            requires Valid();
+            ensures Valid();
+
+        {
+            forall x, y :: 
+                x in dom_def() && 
+                y in co_dom() && 
+                related(x, y) ==> 
+                related(x, x)
+        }
+
 
 
         /*
@@ -395,8 +413,60 @@ module binRelS
             requires Valid();
             ensures Valid();
         {
-            forall x, y ::  x in dom() && y in dom() &&
-                            (x, y) in rel() ==> (y, x) in rel()
+            forall x, y ::  x in dom_def() && y in dom_def() &&
+                            related(x, y) ==> related (y, x)
+        }
+
+        
+        /*
+        A binary relation is said to be antisymmetric
+        if whenever both (x, y) and (y, x) are in the
+        relation, it must be that x == y. A canonical
+        example of an antisymmetric relation is <= on
+        the natural numbers. If x <= y and y <= x (and
+        that is possible) then it must be that x == y.
+        */
+        predicate method isAntisymmetric()
+            reads this;
+            reads r;
+            requires Valid();
+            ensures Valid();
+
+        {
+            forall x, y ::  x in dom_def() &&
+                            y in dom_def() &&
+                            related (x, y)&&
+                            related (y,x) ==> 
+                            x == y
+            // Note: equivalent to xRy ==> !yRx
+        }
+
+        /*
+        A binary relation, R, is said to be asymmetric 
+        (as distinct from anti-symmetric) if it is both
+        anti-symmetric and also irreflexive. The latter
+        property rules out an element being related to
+        itself. Think of it as removing the possibility
+        of being "equal" in an otherwise anti-symmetric
+        (such as less than or equal) relation.
+        
+        More precisely, in an asymmetric relation, for 
+        all elements a and and b, if a is related to b 
+        in R, then b is not and cannot be related to a. 
+        
+        The canonical example of an asymmetric relation
+        is less than on the integers. If a < b then it 
+        cannot also be that b < a. To be asymmetric is 
+        the same as being antisymmetric and irreflexive.
+        */
+        predicate method isAsymmetric()
+            reads this;
+            reads r;
+            requires Valid();
+            ensures Valid();
+
+        {
+            isAntisymmetric() && isIrreflexive()
         }
 
 
@@ -410,18 +480,16 @@ module binRelS
             ensures Valid();
         {
             forall x, y, z ::  
-                x in dom() && y in dom() && z in dom() &&
-                (x, y) in rel() && 
-                (y, z) in rel() ==> 
-                (x, z) in rel() 
+                x in dom_def() && y in dom_def() && z in dom_def() &&
+                related (x, y) && 
+                related (y, z)  ==> 
+                related (x, z) 
         }
 
 
         /*
         Exercise: formalize and implement a test for being
         an equivalence relation.
-
-        A preorder that is symmetric.
         */
        predicate method isEquivalence()
             reads this;
@@ -429,9 +497,9 @@ module binRelS
             requires Valid();
             ensures Valid();
         {
-            isPreorder() && isSymmetric() 
+            isReflexive() && isSymmetric() && isTransitive()
+            //Note: equivalent to isPreorder() && isSymmetric() 
         }
-
 
 
         /*************************************/
@@ -469,7 +537,6 @@ module binRelS
         {
             isReflexive() && isTransitive() 
         }
-
 
         /*
         A binary relation is a partial order if it is
@@ -511,42 +578,6 @@ module binRelS
             isPreorder() && isAntisymmetric()
         }
 
-
-        /*
-        The kind of order most familiar from elementary
-        mathematics is a "total" order. The natural and
-        real numbers are totally ordered under the less
-        than or equals relation, for example. Any pair 
-        of such numbers is "comparable." That is, given
-        any two numbers, x and y, either (x, y) or (y, x)
-        is (or both are) in the "less than or equal 
-        relation." 
-
-        A total order, also known as a linear order, a simple order, 
-        or a chain, is a partial order with the additional property 
-        that any two elements, x and y, are comparable. This pair of
-        properties arranges the set into a fully ordered collection. 
-
-        A good example is the integers under the less than or equal
-        operator. By contrast, subset inclusion is a partial order, 
-        as two sets, X and Y, can both be subsets of ("less than or 
-        equal to") a set Z, with neither being a subset of the other.
-        */
-        predicate method isTotalOrder()
-            reads this;
-            reads r;
-            requires Valid();
-            ensures Valid();
-
-        {
-            isPartialOrder() && isTotal()
-        }
-
-
-
-        /********************************************/
-        /**** ADDITIONAL PROPERTIES OF RELATIONS ****/
-        /********************************************/
 
         /*
         We now define what it means for a binary relation 
@@ -598,8 +629,8 @@ module binRelS
             requires Valid();
             ensures Valid();
         {
-            forall x, y :: x in dom() && y in dom() ==> 
-                 (x, y) in rel() || (y, x) in rel()
+            forall x, y :: x in dom_def() && y in co_dom() ==> 
+                 related(x, y) || related(y, x)
         }
 
         
@@ -614,110 +645,48 @@ module binRelS
         }
 
 
+
         /*
-        A relation on a set S is said to be irreflexive
-        if no element is related to, or maps, to itself.
-        As an example, the less than relation on natural
-        numbers is irreflexive: not natural number is less
-        than itself.
+        The kind of order most familiar from elementary
+        mathematics is a "total" order. The natural and
+        real numbers are totally ordered under the less
+        than or equals relation, for example. Any pair 
+        of such numbers is "comparable." That is, given
+        any two numbers, x and y, either (x, y) or (y, x)
+        is (or both are) in the "less than or equal 
+        relation." 
+
+        A total order, also known as a linear order, a 
+        simple order, or a chain, is a partial order with
+        the additional property that any two elements, x
+        and y, are comparable. This pair of properties
+        arranges the set into a fully ordered collection. 
+
+        A good example is the integers under the less than
+        or equal operator. By contrast, subset inclusion is
+        a partial order, as two sets, X and Y, can both be
+        subsets of ("less than or equal to") a set Z, with
+        neither being a subset of the other.
         */
-        predicate method isIrreflexive()
+        predicate method isTotalOrder()
             reads this;
             reads r;
             requires Valid();
             ensures Valid();
 
         {
-            forall x :: x in dom() ==> (x,x) !in rel()
-        }
-
-        
-        /*
-        A binary relation is said to be antisymmetric
-        if whenever both (x, y) and (y, x) are in the
-        relation, it must be that x == y. A canonical
-        example of an antisymmetric relation is <= on
-        the natural numbers. If x <= y and y <= x (and
-        that is possible) then it must be that x == y.
-        */
-        predicate method isAntisymmetric()
-            reads this;
-            reads r;
-            requires Valid();
-            ensures Valid();
-
-        {
-            forall x, y ::     x in dom()   &&   y in dom() &&
-                           (x,y) in rel() && (y,x) in rel() ==> 
-                           x == y
-            // Note: equivalent to xRy ==> !yRx
+            isPartialOrder() && isComplete()
         }
 
 
         /*
-        A binary relation, R, is said to be asymmetric 
-        (as distinct from anti-symmetric) if it is both
-        anti-symmetric and also irreflexive. The latter
-        property rules out an element being related to
-        itself. Think of it as removing the possibility
-        of being "equal" in an otherwise anti-symmetric
-        (such as less than or equal) relation.
-        
-        More precisely, in an asymmetric relation, for 
-        all elements a and and b, if a is related to b 
-        in R, then b is not and cannot be related to a. 
-        
-        The canonical example of an asymmetric relation
-        is less than on the integers. If a < b then it 
-        cannot also be that b < a. To be asymmetric is 
-        the same as being antisymmetric and irreflexive.
-        */
-        predicate method isAsymmetric()
-            reads this;
-            reads r;
-            requires Valid();
-            ensures Valid();
-
-        {
-            isAntisymmetric() && isIrreflexive()
-        }
-
-        /*
-        A binary relation on a set, S, is said to be 
-        quasi-reflexive if every element that is related
-        to some other element is also related to itself.
-
-        Adapted from Wikipedia: An example is a relation 
-        "has the same limit as" on infinite sequences of 
-        real numbers. Recall that some such sequences do
-        converge on a limit. For example, the infinite
-        sequence, 1/n, for n = 1 to infinity, converges
-        on (has limit) zero. Not every sequence of real
-        numbers has such a limit, so the "has same limit
-        as" relation is not reflexive. But if on sequence 
-        has the same limit as some other sequence, then 
-        it has the same limit as itself.
-        */
-        predicate method isQuasiReflexive()
-             reads this;
-            reads r;
-            requires Valid();
-            ensures Valid();
-
-        {
-            forall x, y :: 
-                x in dom() && y in dom() && (x,y) in rel() ==> 
-                    (x,x) in rel() && (y,y) in rel()
-        }
-
-
-        /*
-        A binary relation is said to be coreflexive is 
-        for all x and y in S it holds that if xRy then x = y. 
-        Every coreflexive relation is a subset of an identity 
-        relation (in which every element is related to and only
-        to itself). A relation is thus co-reflexive if it 
-        relates just some object to, and only to, themselves.
+        A binary relation is said to be coreflexive if 
+        for all x and y in S it holds that if xRy then 
+        x = y. A coreflexive relation is a subset of an
+        identity relation, in which *every* element is 
+        related to, and only to, itself. A relation is 
+        thus co-reflexive if it relates some object to,
+        and only to, themselves.
         
         For example, if every odd number is related itself
         under an admittedly "odd" version of equality, then
@@ -729,10 +698,11 @@ module binRelS
             requires Valid();
             ensures Valid(); 
         {
-            forall x, y :: x in dom() && y in dom() && 
-                (x,y) in rel() ==> x == y
+            forall  x, y :: x in dom_def() && 
+                    y in co_dom() && 
+                    related (x,y) ==> 
+                    x == y
         }
-
 
         /*********************************************/
         /**** MORE ADVANCED ORDER THEORY CONCEPTS ****/
@@ -807,8 +777,8 @@ module binRelS
         /*
         Weak ordering
 
-        "There are several common ways of formalizing weak orderings, 
-        that are different from each other but cryptomorphic 
+        "There are several common ways of formalizing weak
+        orderings, different from each other but cryptomorphic 
         (interconvertable with no loss of information): they may be 
         axiomatized as strict weak orderings (partially ordered sets 
         in which incomparability is a transitive relation), as total 
@@ -857,8 +827,11 @@ module binRelS
 
  
         /*
-        A strict weak ordering is a strict partial order in which the relation "neither a R b nor b R a" is transitive. That is, for
-        all x, y, z in S, if neither x R y nor y R x holds, and if neither y R z nor z R y holds, then neither x R z nor z R x holds.
+        A strict weak ordering is a strict partial order 
+        in which the relation "neither a R b nor b R a" is
+        transitive. That is, for all x, y, z in S, if neither
+        x R y nor y R x holds, and if neither y R z nor z R y
+        holds, then neither x R z nor z R x holds.
 
         In the C++ Standard Template Library (STL), if you want to use
         a standard sort routine or map data structure you have to define 
@@ -867,14 +840,47 @@ module binRelS
 
         From StackOverflow:
 
-        This notion, which sounds somewhat like an oxymoron, is not very commonly used in mathematics, but it is in programming. The "strict" just means it is the irreflexive form "<" of the comparison rather than the reflexive "≤". The "weak" means that the absence of both a<b and b<a do not imply that a=b. However as explained here, the relation that neither a<b nor b<a holds is required to be an equivalence relation. The strict weak ordering then induces a (strict) total ordering on the equivalence classes for this equivalence relation.
+        This notion, which sounds somewhat like an oxymoron, 
+        is not very commonly used in mathematics, but it is in 
+        programming. The "strict" just means it is the irreflexive 
+        form "<" of the comparison rather than the reflexive "≤". 
+        The "weak" means that the absence of both a<b and b<a do 
+        not imply that a=b. However as explained here, the relation 
+        that neither a<b nor b<a holds must be an equivalence relation. 
+        The strict weak ordering then induces a (strict) total 
+        ordering on the equivalence classes for this equivalence 
+        relation.
 
-        This notion is typically used for relations that are in basically total orderings, but defined using only partial information about the identity of items. For instance if a<b between persons means that a has a name that (strictly) precedes the name of b alphabetically, then this defines a strict weak order, since different persons may have identical names; the relation of having identical names is an equivalence relation.
+        This notion is typically used for relations that are in 
+        basically total orderings, but defined using only partial 
+        information about the identity of items. For instance 
+        if a<b between persons means that a has a name that 
+        (strictly) precedes the name of b alphabetically, then
+        this defines a strict weak order, since different persons
+        may have identical names; the relation of having 
+        identical names is an equivalence relation.
 
-        One can easily show that for a strict weak ordering "<", the relation a≮b is (reflexive and) transitive, so it is a pre-order,and the associated equivalence relation is the same as the one associated above to the strict weak ordering. In fact "a≮b" is a total pre-order which induces the same total ordering (or maybe it is better to say the opposite ordering, in view of the negation) on its equivalence classes as the strict weak ordering does. I think I just explained that the notions of strict weak ordering and total pre-order are equivalent. The WP article also does a reasonable job explaining this.
+        One can easily show that for a strict weak ordering "<", 
+        the relation a≮b is (reflexive and) transitive, so it 
+        is a pre-order,and the associated equivalence relation 
+        is the same as the one associated above to the strict 
+        weak ordering. In fact "a≮b" is a total pre-order which 
+        induces the same total ordering (or maybe it is better 
+        to say the opposite ordering, in view of the negation)
+        on its equivalence classes as the strict weak ordering
+        does. I think I just explained that the notions of 
+        strict weak ordering and total pre-order are equivalent. 
+        The WP article also does a reasonable job explaining this.
 
         Marc van Leeuwen:
-        If you are comparing strings, then you would often just define a total ordering (which is a special case of a strict weak ordering) like lexicographic ordering. However, it could be that you want to ignore upper case/lower case distinctions, which would make it into a true weak ordering (strings differing only by case distinctions would then form an equivalence class).
+        If you are comparing strings, then you would often just 
+        define a total ordering (which is a special case of a 
+        strict weak ordering) like lexicographic ordering. 
+        However, it could be that you want to ignore upper 
+        case/lower case distinctions, which would make it 
+        into a true weak ordering (strings differing only 
+        by case distinctions would then form an equivalence 
+        class).
 
         Note: isStrictWeakOrdering <==> isTotalPreorder (should verify)
         */
@@ -886,8 +892,14 @@ module binRelS
         {
             isStrictPartialOrder() && 
             // and transitivity of incomparability
-            forall x, y, z :: x in dom() && y in dom() && z in dom() &&
-               (x, y) !in rel() && (y, z) !in rel() ==> (x, z) !in rel()
+            // i.e., transitivity of unrelatedness
+            forall x, y, z :: 
+                x in dom_def() && 
+                y in dom_def() && 
+                z in dom_def() &&
+               !related(x, y) && 
+               !related(y, z) ==> 
+               !related(x, z)
         }
 
 
@@ -900,22 +912,25 @@ module binRelS
         As an example, the the less than relation over the
         infinite set of natural numbers is well founded 
         because in any subset of the natural numbers there 
-        is because there is always a minimal element, m: an
-        element that is less than every other element in the
-        set. 
+        is always a minimal element, m, an element that is
+        less than every other element in the set. On the
+        other hand, the less than relation on the integers
+        is not well founded. For example in the set of all
+        integers less than zero there is no least element.
         
-        The concept of being
-        well founded turns out to be important for
+        The concept of being well founded is essential for
         reasoning about when recursive definitions are valid.
         In a nutshell, each recursive call has to be moving
-        "down" a finite chain to a minimum element. Another
+        "down" a finite chain to a minimum element, at which
+        point a non-recursive base case must apply. Another
         way to explain being well-founded is that a relation
         is not well founded if there's a way either to "go 
-        down" or to "go around in circles" forever. Here we
-        give a version of well foundedness only for finite 
-        relations (there can never be an infinite descending
-        chain); what this predicate basically rules out 
-        are cycles in a relation.
+        down forever" or to "go around in circles" forever.
+        
+        Here we give a version of well foundedness only for 
+        finite relations (there can never be an infinite 
+        descending chain); what this predicate basically 
+        rules out, therefore, are cycles in a relation.
         */
         predicate method isWellFounded()
             reads this;
@@ -923,14 +938,16 @@ module binRelS
             requires Valid();
             ensures Valid();
         {
-            forall X | X <= dom() ::
+            forall X | X <= dom_def() ::
                 X != {} ==>
-                    exists min :: min in X && 
-                        forall s :: s in X ==> (s, min) !in rel()
+                exists min :: min in X && 
+                forall s :: s in X ==> 
+                !related(s, min)
         }
 
-
         /*************** END OF ORDER THEORY****************/
+
+
 
 
         /*
@@ -953,8 +970,8 @@ module binRelS
 
         /*
         A binary relation is said to be trichotomous if
-        for any pair of values, x and y, either xRy or 
-        yRx or x==y. The < relation on natural numbers is
+        for any pair of values, x and y, xRy or yRx or 
+        x==y. The < relation on natural numbers is
         an example of a trichotomous relation: given any
         two natural numbers, x and y, either x < y or
         y < x, or, if neither condition holds, then it
@@ -967,8 +984,10 @@ module binRelS
             ensures Valid();
 
         {
-            forall x, y :: x in dom() && y in dom() ==>
-                (x, y) in rel() || (y, x) in rel() || x == y
+            forall x, y :: x in dom_def() && y in dom_def() ==>
+                (related(x, y) && !related(y,x) && x!=y) || 
+                (related (y, x) && !related(x,y) && x != y) || 
+                (!related(x,y) && !related(y,x) && x == y)
         }
 
 
@@ -982,8 +1001,8 @@ module binRelS
             ensures Valid();
 
         {
-            forall x, y, z :: x in dom() && y in dom() && z in dom() ==>
-                (x, y) in rel() && (x, z) in rel() ==> (y, z) in rel()
+            forall x, y, z :: x in dom_def() && y in dom_def() && z in dom_def() ==>
+                related (x, y) && related (x, z) ==> related(y, z)
         }
 
         /*
@@ -996,8 +1015,8 @@ module binRelS
             ensures Valid();
 
         {
-            forall x, y, z :: x in dom() && y in dom() && z in dom() ==>
-                (y, x) in rel() && (z, x) in rel() ==> (y, z) in rel()
+            forall x, y, z :: x in dom_def() && y in dom_def() && z in dom_def() ==>
+                related(y, x) && related(z, x) ==> related (y, z)
         }
 
         /*
@@ -1015,29 +1034,83 @@ module binRelS
             isLeftEuclidean() && isRightEuclidean()
         }
 
-
-
-
         /*********************************************
          **** Methods for computing new relations ****
          ********************************************/
+
+                 /*
+        Return the union of this relation and the given 
+        relation, t: b, basicaly (this + t), viewed as sets
+        of pairs. The domain/codomain sets of this and t 
+        must be the same.
+        */
+        method relUnion(t: binRelOnS<S>) returns (r: binRelOnS<S>)
+            requires Valid();
+            requires t.Valid();
+            requires t.dom_def() == dom_def();
+            ensures r.Valid();
+            ensures r.dom_def() == dom_def();
+            ensures r.pairs() == t.pairs() + pairs();
+        {
+            r := new binRelOnS(dom_def(), t.pairs() + pairs());
+        }
+
+
+        /*
+        Return the intersection between this relation and 
+        the given relation, t: b, basicaly (this * t). The
+        domain/codomain sets of this and t must be the same.
+        */
+        method relIntersection(t: binRelOnS<S>) 
+            returns (r: binRelOnS<S>)
+            requires Valid();
+            requires t.Valid();
+            requires t.dom_def() == dom_def();
+            ensures r.Valid();
+            ensures r.dom_def() == dom_def();
+            ensures r.pairs() == t.pairs() * pairs();
+        {
+            r := new binRelOnS(dom_def(),t.pairs() * pairs());
+        }
+
+
+        /*
+        Return the difference between this relation and 
+        the given relation, t: b, basicaly (this - t). The
+        domain/codomain sets of this and t must be the same.
+        */
+        method relDifference(t: binRelOnS<S>) 
+            returns (r: binRelOnS<S>)
+            requires Valid();
+            requires t.Valid();
+            requires t.dom_def() == dom_def();
+            ensures r.Valid();
+            ensures r.dom_def() == dom_def();
+            ensures r.pairs() == pairs() - t.pairs();
+        {
+            r := new binRelOnS(dom_def(), pairs() - t.pairs());
+        }
+      
+        
+
 
         /*
         The inverse of this relation is a relation on the 
         same set with all the same tuples but in reverse 
         order.
         */
-        method inverse() returns (r: binRelOnS<Stype>)
+        method inverse() returns (r: binRelOnS<S>)
             requires Valid();
             ensures r.Valid();
-            ensures r.dom() == dom();
-            ensures r.rel() == set x, y | 
-                x in dom() && y in codom() && (x, y) in rel():: (y, x);
+            ensures r.dom_def() == co_dom();
+            ensures r.co_dom() == dom_def();
+            ensures r.pairs() == set x, y | 
+                x in dom_def() && y in co_dom() && related(x, y) :: (y, x);
             ensures Valid();
         {
             var invPairs := set x, y | 
-                x in dom() && y in codom() && (x, y) in rel():: (y, x);
-             r := new binRelOnS(dom(), invPairs);
+                x in dom_def() && y in co_dom() && related(x, y) :: (y, x);
+             r := new binRelOnS(dom_def(), invPairs);
         }
         
         
@@ -1046,56 +1119,49 @@ module binRelS
         of this relation. Used, among other things, to
         compute reflexive closures.
         */
-        method identity() returns (id: binRelOnS<Stype>)
+        method identity() returns (id: binRelOnS<S>)
             requires Valid();
             ensures id.Valid();
-            ensures id.dom() == dom() &&
-                    id.rel() == set x | x in dom() :: (x,x);
+            ensures id.dom_def() == dom_def();
+            ensures id.pairs() == set x | x in dom_def() :: (x,x);
             ensures Valid();
         {
-             id := new binRelOnS(dom(), set x | x in dom() :: (x,x));
+             id := new binRelOnS(dom_def(), set x | x in dom_def() :: (x,x));
         }
 
 
          /*
         Return the relation g composed with this 
-        relation, (g o this). The domains/codomains
+        relation, (g o this). The domain/co-domain
         of g and this must be the same.
         */
-        method compose(g: binRelOnS<Stype>) 
-            returns (c : binRelOnS<Stype>)
+        method compose(g: binRelOnS<S>) returns (c : binRelOnS<S>)
             requires Valid();
             requires g.Valid();
-            requires g.dom() == codom();
+            requires g.dom_def() == co_dom();
             ensures c.Valid();
-            ensures c.dom() == dom();
-            ensures c.codom() == dom();
-            ensures c.rel() == set r, s, t | 
-                    r in dom() &&
-                    s in codom() &&
-                    (r, s) in rel() &&
-                    s in g.dom() && 
-                    t in g.codom() &&
-                    (s, t) in g.rel() ::
-                    (r, t)
-        {
-        /*
-            var f' := convertToBinRelOnST();
-            var g' := g.convertToBinRelOnST();
-            var h := composeRST(g',f');
-            c := new binRelOnS<T>(dom(),h.rel());
-        */
-            var p := set r, s, t | 
-                    r in dom() &&
-                    s in codom() &&
-                    (r, s) in rel() &&
-                    s in g.dom() && 
-                    t in g.codom() &&
-                    (s, t) in g.rel() ::
+            ensures c.dom_def() == dom_def();
+            ensures c.co_dom() == g.co_dom();
+            ensures c.pairs() == set r, s, t | 
+                    r in dom_def() &&
+                    s in co_dom() &&
+                    related(r, s) &&
+                    s in g.dom_def() && 
+                    t in g.co_dom() &&
+                    g.related(s, t) ::
                     (r, t);
-            c := new binRelOnS(dom(), p);
+        {
+            var prs := set r, s, t | 
+                    r in dom_def() &&
+                    s in co_dom() &&
+                    related(r, s) &&
+                    s in g.dom_def() && 
+                    t in g.co_dom() &&
+                    g.related(s, t) ::
+                    (r, t);
+            c := new binRelOnS(dom_def(), prs);
+            assert co_dom() == old(co_dom());       // why needed?     
         }
-
 
         /*
         The reflexive closure is the smallest relation
@@ -1104,12 +1170,13 @@ module binRelS
         the identity relation on the same set. That is
         how we compute it here.
         */
-        method reflexiveClosure() returns (r: binRelOnS<Stype>)
+        method reflexiveClosure() returns (r: binRelOnS<S>)
             requires Valid();
             ensures r.Valid();
-            ensures r.dom() == dom();
-            ensures r.rel() == rel() + set x | x in dom() :: (x,x);
-            ensures rel() <= r.rel();
+            ensures r.dom_def() == dom_def();
+            ensures r.pairs() == this.pairs() + 
+                                 set x | x in dom_def() :: (x,x);
+            //ensures pairs() <= r.pairs();
             ensures Valid();
         {
             var id := this.identity();
@@ -1126,324 +1193,18 @@ module binRelS
         (s, t), and making sure that all reversed pairs, 
         (t, s), are also included.
         */
-        method symmetricClosure() returns (r: binRelOnS<Stype>)
+        method symmetricClosure() returns (r: binRelOnS<S>)
             requires Valid();
             ensures r.Valid();
-            ensures r.dom() == dom();
-            ensures r.rel() == rel() + set x, y | 
-                x in dom() && y in codom() && (x, y) in rel():: (y, x);
-            ensures rel() <= r.rel();
+            //ensures r.dom_def() == dom_def();
+            ensures r.pairs() == pairs() + set x, y | 
+                x in dom_def() && y in co_dom() && related(y, x) :: (x, y);
+            //ensures pairs() <= r.pairs();
             ensures Valid();
         {
             var inv := this.inverse();
             r := relUnion(inv);
         }
- 
-
-        /*
-        The transitive closure of a binary relation, R,
-        on a set, S, is the relation R plus all tuples,
-        (x, y) when there is any "path" (a sequence of 
-        tuples) from x to y in R. In a finite relation.
-        such as those modeled by this class, the length
-        of a path is bounded by the size of the set, S,
-        so we can always compute a transitive closure by
-        following links and adding tuples enough times 
-        to have followed all maximum-length paths in R.
-        That's what we do, here.
-         */
-        method transitiveClosure() returns (r: binRelOnS<Stype>)
-            requires Valid();
-            ensures r.Valid();
-            ensures r.dom() == dom();
-            ensures rel() <= r.rel();
-            //ensures r.isTransitive(); -- need to prove it
-            ensures Valid();
-        {
-            var cl := rel();
-            var n := |dom()|;
-            while (n > 0)
-                invariant forall x, y :: 
-                    (x, y) in cl ==> x in dom() && y in dom()
-                invariant rel() <= cl;
-            {
-                var new_pairs := set x, y, z | 
-                        x in dom() && y in dom() && z in dom() &&
-                        (x, y) in cl && (y, z) in cl ::
-                        (x, z);
-                if cl == cl + new_pairs { break; }
-                cl := cl + new_pairs;
-                n := n - 1;
-            }
-            r := new binRelOnS(dom(), cl);
-        }
-
-        /*
-        The reflexive transitive closure is the smallest 
-        relation that contains this relation and is both
-        reflexive and transitive. 
-        
-        FIX: Under-informative specification!!!
-        */
-        method reflexiveTransitiveClosure() returns (r: binRelOnS<Stype>)
-            requires Valid();
-            ensures r.Valid();
-            ensures r.dom() == dom();
-            ensures rel() <= r.rel();
-            ensures Valid();
-        {
-            var refc := this.reflexiveClosure();
-            r := refc.transitiveClosure();
-        }
- 
-        //Reflexive transitive symmetric closure
-        method reflexiveSymmetricTransitiveClosure() 
-            returns (r: binRelOnS<Stype>)
-            requires Valid();
-            ensures r.Valid();
-            ensures r.dom() == dom();
-            ensures rel() <= r.rel();
-            ensures Valid();
-        {
-            var refc := this.reflexiveClosure();
-            var symc := refc.symmetricClosure();
-            r := symc.transitiveClosure();
-        }
- 
-
-        /*
-        The reflexive reduction of a relation is the relation
-        minus the idenitity relation on the same set. It is, to
-        be formal about it, the smallest relation with the same
-        reflexive closure as this (the given) relation.
-        */
-        method reflexiveReduction() returns (r: binRelOnS<Stype>)
-            requires Valid();
-            ensures r.Valid();
-            ensures r.dom() == dom();
-            ensures r.rel() == rel() -  set x | x in dom() :: (x,x);
-            ensures Valid();
-        {
-            var id := this.identity();
-            r := relDifference(id);
-        }
-
-
-       /* 
-        transitive reduction -- TBD
-        */
-    
-
-        /*
-        The "restriction" of a relation, R, on a set, S, to a 
-        subset, X, of S, is a relation X containing the pairs 
-        in R both of whose elements are in X. That X is a subset 
-        of S is a precondition for calling this method.
-        */
-        method restriction(X: set<Stype>) returns (r: binRelOnS<Stype>)
-            requires Valid();
-            requires X <= dom();
-            ensures r.Valid();
-            ensures r.dom() == X;
-            ensures r.rel() == set x, y | x in dom() && y in dom() && 
-                (x, y) in rel() && x in X && y in X :: (x, y);
-            ensures Valid();
-        {
-            r := new binRelOnS(X, set x, y | x in dom() && y in dom() && 
-                (x, y) in rel() && x in X && y in X :: (x, y));
-        }
-
-
-        /*
-        Return the union of this relation and the given 
-        relation, t: b, basicaly (this + t), viewed as sets
-        of pairs. The domain/codomain sets of this and t 
-        must be the same.
-        */
-        method relUnion(t: binRelOnS<Stype>) returns (r: binRelOnS<Stype>)
-            requires Valid();
-            requires t.Valid();
-            requires t.dom() == dom();
-            ensures r.Valid();
-            ensures r.dom() == dom();
-            ensures r.rel() == t.rel() + rel();
-        {
-            r := new binRelOnS(dom(),t.rel() + rel());
-        }
-
-
-        /*
-        Return the intersection between this relation and 
-        the given relation, t: b, basicaly (this * t). The
-        domain/codomain sets of this and t must be the same.
-        */
-        method relIntersection(t: binRelOnS<Stype>) 
-            returns (r: binRelOnS<Stype>)
-            requires Valid();
-            requires t.Valid();
-            requires t.dom() == dom();
-            ensures r.Valid();
-            ensures r.dom() == dom();
-            ensures r.rel() == t.rel() * rel();
-        {
-            r := new binRelOnS(dom(),t.rel() * rel());
-        }
-
-
-        /*
-        Return the difference between this relation and 
-        the given relation, t: b, basicaly (this - t). The
-        domain/codomain sets of this and t must be the same.
-        */
-        method relDifference(t: binRelOnS<Stype>) 
-            returns (r: binRelOnS<Stype>)
-            requires Valid();
-            requires t.Valid();
-            requires t.dom() == dom();
-            ensures r.Valid();
-            ensures r.dom() == dom();
-            ensures r.rel() == rel() - t.rel();
-        {
-            r := new binRelOnS(dom(), rel() - t.rel());
-        }
-      
-        
-        /*
-        Return the complement of the given dependency
-        relation on S. Such a relation is called an
-        independency relation. Elements are related in
-        such a relation if they are "independent" in
-        the given dependency relation.
-        */
-        method independencyRelationOnS(d: binRelOnS<Stype>) 
-            returns (r: binRelOnS<Stype>)
-            requires Valid();
-            requires d.Valid();
-            requires d.isDependencyRelation();
-            ensures r.Valid();
-            ensures r.dom() == dom() &&
-                    r.rel() == 
-                        (set x, y | x in dom() && y in dom() :: (x,y)) -
-                        d.rel();
-            ensures Valid();
-        {
-            r := new binRelOnS(
-                dom(), 
-                (set x,y | x in dom() && y in dom() :: (x,y)) - d.rel());
-        }
-
-
-        /******************************************/
-        /***** METHODS FOR APPLYING RELATIONS *****/
-        /******************************************/
-
-
-        /*
-        The image of a domain value under a relation
-        is the set of values to which the relation
-        maps that domain element. This method provides
-        this behavior. It computes and returns the 
-        image of a domain element under this relation.
-        It requires that the given value actually be
-        in the domain set. Note that if the relation
-        is not defined for an element in its domain,
-        the image of that value will simply be the
-        empty set.
-        */
-        function method image(k: Stype): (r: set<Stype>)
-            reads this;
-            reads r;
-            requires Valid(); 
-            requires k in dom();
-            ensures Valid();
-        {
-            r.image(k)
-        }
-
-
-        /*
-        The image of a *set* of domain elements is just
-        the set of values that the relation maps those
-        elements to. It basically "looks up" each domain
-        element and returns the union of all the images
-        of those values. A precondition for calling this
-        function is that all argument values (in ks) be
-        in the domain of this relation.
-        */
-        function method imageOfSet(ks: set<Stype>): (r: set<Stype>)
-            reads this;
-            reads r;
-            requires Valid(); 
-            requires forall k :: k in ks ==> k in dom();  
-            ensures Valid();
-        {
-            r.imageOfSet(ks)
-        }
-
-
-        /*
-        Given an element in the range of a relation, its
-        preimage is the set of elements in in the domain
-        that map to it. This function returns the preimage
-        of a given value in the range of this relation. It
-        is a precondition that v be in the codomain of this
-        relation.
-        */
-        function method preimage(v: Stype): (r: set<Stype>)
-            reads this;
-            reads r;
-            requires Valid(); 
-            requires v in codom();
-            ensures Valid();
-        {
-            r.preimage(v)
-        }
-
-
-        /*
-        Compute image of a domain element under this relation.
-        */
-        function method preimageOfSet(vs: set<Stype>): (r: set<Stype>)
-            reads this;
-            reads r;
-            requires Valid(); 
-            requires forall v :: v in vs ==> v in codom();
-            ensures Valid();
-        {
-            r.preimageOfSet(vs)
-        }
-
-
-        /*
-        A relation is said to be defined for a given
-        domain element, k, if the relation maps k to 
-        at least one value in the codomain. 
-        */
-        predicate method isDefinedFor(k: Stype)
-            reads this;
-            reads r;
-            requires Valid();
-            requires k in dom();
-            ensures Valid();
-        {
-            r.isDefinedFor(k)
-        }
-
-        /*
-        If this relation is a function, then we can
-        "apply" it to a single value, on which this
-        function is defined, to get a single result. 
-        */
-        method apply(k: Stype) returns (ret: Stype)
-            requires Valid(); 
-            requires k in dom();   // only ask about domain values
-            requires isFunction(); // only ask if this is a function
-            requires isTotal();   // that is defined for every value
-            requires isDefinedFor(k);  // and that is non-empty
-//            ensures ret in image(k);  // want |image(k)| == 1, too
-            ensures Valid();
-        {
-            ret := r.fimage(k);
-        }
+         
     }
 }

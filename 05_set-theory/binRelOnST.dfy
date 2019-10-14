@@ -37,7 +37,7 @@ module binRelST
         the verifier, though they can be made "opaque" using
         a special keyword. 
         */
-        constructor(dom_def: set<S>, co_dom: set<T>, pairs: set<(S,T)>)
+        constructor(domdef: set<S>, codom: set<T>, prs: set<(S,T)>)
 
             /*
             Ensure that all values in tuples are from dom and co_dom
@@ -47,9 +47,15 @@ module binRelST
             when we use them, we will end up with a "Valid" object.
             */
             requires forall x, y :: 
-                (x, y) in pairs ==> x in dom_def && y in co_dom;
+                (x, y) in prs ==> x in domdef && y in codom;
 
-            /*
+                /*
+            Once the constructor finishes, this object should 
+            satisfy its state invariant.
+            */
+            ensures Valid();
+
+        /*
             Explain to verifier what this method accomplishes. The
             verifier needs this information to verify propositions
             elsewhere in this code. It's because method bodies are 
@@ -57,17 +63,14 @@ module binRelST
             facts from the method body itself. (Function definitions
             are not opaque in this way.)
             */
-            ensures d == dom_def && c == co_dom && p == pairs;
+           ensures  dom_def() == domdef && 
+                    co_dom() == codom && 
+                    pairs() == prs;
 
-            /*
-            Once the constructor finishes, this object should 
-            satisfy its state invariant.
-            */
-            ensures Valid();
         {
-            d := dom_def;
-            c := co_dom;
-            p := pairs;
+            d := domdef;
+            c := codom;
+            p := prs;
         }
 
 
@@ -262,7 +265,7 @@ module binRelST
         community about whether the partial functions include or exclude the
         total functions.
         */
-        predicate method isStrictlyPartial()
+        predicate method isStrictlyPartialFunction()
             reads this;
             requires Valid();
             requires isFunction();
