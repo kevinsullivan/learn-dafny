@@ -23,11 +23,6 @@ predicate set_subset<A(!new)>(S: set<A>, T: set<A>)
     forall s :: s in S ==> s in T && (exists t :: t in T && t !in S)
 }
 
-function foo(): set<int>
-{
-    set t: int | 0 <= t <= 50 && t % 2 == 0
-}
-
 function intersection<A>(S: set<A>, T: set<A>): set<A>
 {
     set e | e in S && e in T
@@ -37,6 +32,10 @@ function union<A>(S: set<A>, T: set<A>): set<A>
 {
     //set e | e in S || e in T
     {}
+    // Dafny's implementation is incomplete.
+    // It can't infer resulting set is finite
+    // even though both S and T clearly are.
+    // This is a missing-feature bug in Dafny.
 }
 
 function set_minus<A>(T: set<A>, S: set<A>): set<A>
@@ -47,4 +46,9 @@ function set_minus<A>(T: set<A>, S: set<A>): set<A>
 function method set_product<A,B>(S: set<A>, T: set<B>): set<(A,B)>
 {
     set s, t | s in S && t in T :: (s,t)
+}
+
+function method power_set<A>(S: set<A>) : set<set<A>>
+{
+    set s | s <= S
 }

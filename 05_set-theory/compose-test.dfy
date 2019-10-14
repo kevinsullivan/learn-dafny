@@ -33,11 +33,11 @@ module compose_test
         print "NAMES:\n", names, "\n";
         print "MAJORS:\n", majors, "\n";
         print "SCHOOLS:\n", schools, "\n";
-        print "NAME-MAJOR RELATION:\n", nameToMajor.rel(), "\n";
-        print "MAJOR-SCHOOL RELATION:\n", majorToSchool.rel(), "\n";
+        print "NAME-MAJOR RELATION:\n", nameToMajor.pairs(), "\n";
+        print "MAJOR-SCHOOL RELATION:\n", majorToSchool.pairs(), "\n";
 
         var nameToSchool := nameToMajor.compose(majorToSchool);
-        print "NAME-SCHOOL RELATION:\n", nameToSchool.rel(), "\n";
+        print "NAME-SCHOOL RELATION:\n", nameToSchool.pairs(), "\n";
     }
 
     method fof()
@@ -48,7 +48,7 @@ module compose_test
         var friends := { ("Jane","Binh"), ("Binh","Larry"), ("Larry", "Spiros") };
         var friendsRel := new binRelOnS(people, friends);
         var friendsRel' := friendsRel.compose(friendsRel);
-        print "\nFriendsRel2:\n", friendsRel'.rel(), "\n";
+        print "\nFriendsRel2:\n", friendsRel'.pairs(), "\n";
         // we'd like to be able to take unions of relations
         // exercise -- in class
         // might as well define relation equality while we're at it

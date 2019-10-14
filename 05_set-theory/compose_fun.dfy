@@ -22,11 +22,11 @@ module compose_fun
         var student2School := 
             student2major.compose(major2School);
 
-        print student2School.rel();
+        print student2School.pairs();
 
         var friendPairs := {("Anna","Pete"), ("Pete","Binh"), ("Pete","Anna")};
         var friends := new binRelOnS(students, friendPairs);
         var mystery := friends.compose(friends);
-        print "\n", mystery.rel();
+        print "\n", mystery.pairs();
     } 
 }
